@@ -1,11 +1,12 @@
 package googlepubsub
 
 import (
-	"adehikmatfr/learn-go/pubsub/pub/messagebroker"
 	"context"
 	"fmt"
 	"net/url"
 	"os"
+
+	"adehikmatfr/learn-go/pubsub/pub/messagebroker"
 
 	"adehikmatfr/learn-go/pubsub/pub/redis"
 
@@ -48,7 +49,9 @@ var c *pubsub.Client
 var rc *redis.RedisClient
 
 func (ga *GooglePubSubAdapter) Init() error {
-	setLocalRedisClient(ga.Options.RedisClient)
+	if ga.Options != nil && ga.Options.RedisClient != nil {
+		setLocalRedisClient(ga.Options.RedisClient)
+	}
 	e := ga.Broker.initProccess()
 	return e
 }
@@ -62,7 +65,7 @@ func (ga *GooglePubSubAdapter) Publish(m messagebroker.PublishMessage) error {
 		OrderingKey:           m.Options.OrderingKey,
 	}
 
-	if gm.EnableMessageOrdering && ga.Options.RedisClient == nil {
+	if gm.EnableMessageOrdering && rc == nil {
 		return fmt.Errorf("please config redis client first for use ordering msg")
 	}
 
@@ -75,7 +78,7 @@ func (ga *GooglePubSubAdapter) Publish(m messagebroker.PublishMessage) error {
 }
 
 func (ga *GooglePubSubAdapter) Subscribe(name string, handler messagebroker.SubscribeMessageHandler) {
-	e := ga.Broker.subscribeProccess(name, handler, ga.Options.RedisClient)
+	e := ga.Broker.subscribeProccess(name, handler)
 	handler.OnError(e)
 }
 
@@ -118,7 +121,7 @@ func (g *GooglePubSub) publishProccess(p PublishMessage) (string, error) {
 	return id, nil
 }
 
-func (g *GooglePubSub) subscribeProccess(subName string, handler messagebroker.SubscribeMessageHandler, rc *redis.RedisClient) error {
+func (g *GooglePubSub) subscribeProccess(subName string, handler messagebroker.SubscribeMessageHandler) error {
 	sub, e := getSubscription(subName)
 
 	if e != nil {
@@ -131,9 +134,7 @@ func (g *GooglePubSub) subscribeProccess(subName string, handler messagebroker.S
 		m.Ack()
 		p := true
 
-		if m.OrderingKey != "" && rc == nil {
-			p = false
-		} else if m.OrderingKey != "" && rc != nil {
+		if m.OrderingKey != "" && rc != nil {
 			lt, _ := getLastPublish(m.OrderingKey)
 			pt := int(m.PublishTime.Unix())
 			if lt >= pt {
