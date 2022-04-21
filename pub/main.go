@@ -6,11 +6,15 @@ import (
 )
 
 type client = messagebroker.Client
-type broker = googlepubsub.GooglePubSub
-type adapter = googlepubsub.GooglePubSubAdapter
-type config = googlepubsub.Config
 type msg = messagebroker.PublishMessage
 type msgOpts = messagebroker.PublishOptions
+type gb = googlepubsub.GooglePubSub
+type ga = googlepubsub.GooglePubSubAdapter
+type gc = googlepubsub.Config
+
+// type rb = rabbitmq.RabbitMQ
+// type ra = rabbitmq.RabbitMQAdapter
+// type rc = rabbitmq.Config
 
 func main() {
 	var sl []googlepubsub.Strategy
@@ -18,19 +22,32 @@ func main() {
 		TopicName:         "test",
 		SubscriptionNames: []string{"test-sub"},
 	})
-	cfg := config{
+	cfg := gc{
 		AuthJsonPath: "assets/pubsub-credential.json",
 		ProjectId:    "test-go-pub-sub",
 		Strategy:     sl,
 	}
-	client := &client{}
-	googlePubSubBroker := &broker{
+	broker := &gb{
 		Cfg: cfg,
 	}
-	googlePubSubAdapter := &adapter{
-		GooglePubsubBroker: googlePubSubBroker,
+	msgBroker := &ga{
+		Broker: broker,
 	}
-	client.Init(googlePubSubAdapter)
+
+	// cfg := rc{
+	// 	Username: "guest",
+	// 	Password: "guest",
+	// 	Server:   "localhsot:5672",
+	// }
+	// broker := &rb{
+	// 	Cfg: cfg,
+	// }
+	// msgBroker := &ra{
+	// 	Broker: broker,
+	// }
+
+	client := &client{}
+	client.Init(msgBroker)
 	client.Publish(msg{
 		Name:    "test",
 		Message: "hallo word",

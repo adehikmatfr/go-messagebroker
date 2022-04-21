@@ -35,13 +35,13 @@ func main() {
 		Strategy:     sl,
 	}
 	client := &client{}
-	googlePubSubBroker := &broker{
+	broker := &broker{
 		Cfg: cfg,
 	}
-	googlePubSubAdapter := &adapter{
-		GooglePubsubBroker: googlePubSubBroker,
+	msgBroker := &adapter{
+		Broker: broker,
 	}
-	client.Init(googlePubSubAdapter)
+	client.Init(msgBroker)
 	thdl := &testSubHdl{}
 	client.Subscribe("test-sub", thdl)
 }

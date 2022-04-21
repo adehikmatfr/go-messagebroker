@@ -11,7 +11,7 @@ import (
 )
 
 type GooglePubSubAdapter struct {
-	GooglePubsubBroker *GooglePubSub
+	Broker *GooglePubSub
 }
 
 type GooglePubSub struct {
@@ -38,7 +38,7 @@ type PublishMessage struct {
 var c *pubsub.Client
 
 func (ga *GooglePubSubAdapter) Init() error {
-	e := ga.GooglePubsubBroker.initProccess()
+	e := ga.Broker.initProccess()
 	return e
 }
 
@@ -48,12 +48,12 @@ func (ga *GooglePubSubAdapter) Publish(m messagebroker.PublishMessage) error {
 		Message:               m.Message,
 		EnableMessageOrdering: m.Options.EnableOrdering,
 	}
-	_, e := ga.GooglePubsubBroker.publishProccess(gm)
+	_, e := ga.Broker.publishProccess(gm)
 	return e
 }
 
 func (ga *GooglePubSubAdapter) Subscribe(name string, handler messagebroker.SubscribeMessageHandler) {
-	e := ga.GooglePubsubBroker.subscribeProccess(name, handler)
+	e := ga.Broker.subscribeProccess(name, handler)
 	handler.OnError(e)
 }
 
