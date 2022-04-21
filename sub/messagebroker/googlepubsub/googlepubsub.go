@@ -7,11 +7,18 @@ import (
 	"net/url"
 	"os"
 
+	"adehikmatfr/learn-go/pubsub/sub/redis"
+
 	"cloud.google.com/go/pubsub"
 )
 
 type GooglePubSubAdapter struct {
-	Broker *GooglePubSub
+	Broker  *GooglePubSub
+	Options *AdapterOptions
+}
+
+type AdapterOptions struct {
+	RedisClient *redis.RedisClient
 }
 
 type GooglePubSub struct {
@@ -24,6 +31,7 @@ type Strategy struct {
 }
 
 type Config struct {
+	// start from path project
 	AuthJsonPath string
 	ProjectId    string
 	Strategy     []Strategy
@@ -33,32 +41,46 @@ type PublishMessage struct {
 	TopicName             string
 	Message               string
 	EnableMessageOrdering bool
+	OrderingKey           string
 }
 
 var c *pubsub.Client
+var rc *redis.RedisClient
 
 func (ga *GooglePubSubAdapter) Init() error {
+	setLocalRedisClient(ga.Options.RedisClient)
 	e := ga.Broker.initProccess()
 	return e
 }
 
 func (ga *GooglePubSubAdapter) Publish(m messagebroker.PublishMessage) error {
+	var e error
 	gm := PublishMessage{
 		TopicName:             m.Name,
 		Message:               m.Message,
 		EnableMessageOrdering: m.Options.EnableOrdering,
+		OrderingKey:           m.Options.OrderingKey,
 	}
-	_, e := ga.Broker.publishProccess(gm)
-	return e
+
+	if gm.EnableMessageOrdering && ga.Options.RedisClient == nil {
+		return fmt.Errorf("please config redis client first for use ordering msg")
+	}
+
+	_, e = ga.Broker.publishProccess(gm)
+	if e != nil {
+		return e
+	}
+
+	return nil
 }
 
 func (ga *GooglePubSubAdapter) Subscribe(name string, handler messagebroker.SubscribeMessageHandler) {
-	e := ga.Broker.subscribeProccess(name, handler)
+	e := ga.Broker.subscribeProccess(name, handler, ga.Options.RedisClient)
 	handler.OnError(e)
 }
 
 func (g *GooglePubSub) initProccess() error {
-	err := g.setCredentialEnv()
+	err := g.setEnvCredential()
 	if err != nil {
 		return err
 	}
@@ -69,7 +91,7 @@ func (g *GooglePubSub) initProccess() error {
 	if err != nil {
 		return err
 	}
-	setLocalCleint(c)
+	setLocalClient(c)
 
 	err = g.validateStrategyList()
 	if err != nil {
@@ -84,7 +106,8 @@ func (g *GooglePubSub) publishProccess(p PublishMessage) (string, error) {
 	t := c.Topic(p.TopicName)
 	t.EnableMessageOrdering = p.EnableMessageOrdering
 	result := t.Publish(ctx, &pubsub.Message{
-		Data: []byte(p.Message),
+		Data:        []byte(p.Message),
+		OrderingKey: p.OrderingKey,
 	})
 	// Block until the result is returned and a server-generated
 	// ID is returned for the published message.
@@ -95,7 +118,7 @@ func (g *GooglePubSub) publishProccess(p PublishMessage) (string, error) {
 	return id, nil
 }
 
-func (g *GooglePubSub) subscribeProccess(subName string, handler messagebroker.SubscribeMessageHandler) error {
+func (g *GooglePubSub) subscribeProccess(subName string, handler messagebroker.SubscribeMessageHandler, rc *redis.RedisClient) error {
 	sub, e := getSubscription(subName)
 
 	if e != nil {
@@ -105,11 +128,25 @@ func (g *GooglePubSub) subscribeProccess(subName string, handler messagebroker.S
 	ctx := context.Background()
 
 	e = sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
-		// TODO: Handle message.
-		// NOTE: May be called concurrently; synchronize access to shared memory.
 		m.Ack()
-		str := string(m.Data)
-		handler.OnProccess(str)
+		p := true
+
+		if m.OrderingKey != "" && rc == nil {
+			p = false
+		} else if m.OrderingKey != "" && rc != nil {
+			lt, _ := getLastPublish(m.OrderingKey)
+			pt := int(m.PublishTime.Unix())
+			if lt >= pt {
+				p = false
+			} else {
+				setLastPublish(m.OrderingKey, pt)
+			}
+		}
+
+		if p {
+			str := string(m.Data)
+			handler.OnProcess(str)
+		}
 	})
 
 	if e != nil {
@@ -118,7 +155,7 @@ func (g *GooglePubSub) subscribeProccess(subName string, handler messagebroker.S
 	return nil
 }
 
-func (g *GooglePubSub) setCredentialEnv() error {
+func (g *GooglePubSub) setEnvCredential() error {
 	dir, e := os.Getwd()
 	if e != nil {
 		return e
@@ -158,8 +195,21 @@ func (g *GooglePubSub) validateStrategyList() error {
 	return nil
 }
 
-func setLocalCleint(client *pubsub.Client) {
+func setLocalClient(client *pubsub.Client) {
 	c = client
+}
+
+func setLocalRedisClient(redisClient *redis.RedisClient) {
+	rc = redisClient
+}
+
+func setLastPublish(key string, t int) error {
+	return rc.SetInt(key, t)
+}
+
+func getLastPublish(key string) (int, error) {
+	tN, e := rc.GetInt(key)
+	return tN, e
 }
 
 // error topic id not found it can happen because the topic

@@ -3,18 +3,19 @@ package main
 import (
 	"adehikmatfr/learn-go/pubsub/sub/messagebroker"
 	"adehikmatfr/learn-go/pubsub/sub/messagebroker/googlepubsub"
+	"adehikmatfr/learn-go/pubsub/sub/redis"
 	"fmt"
 )
 
-type client = messagebroker.Client
-type broker = googlepubsub.GooglePubSub
-type adapter = googlepubsub.GooglePubSubAdapter
-type config = googlepubsub.Config
+type gb = googlepubsub.GooglePubSub
+type ga = googlepubsub.GooglePubSubAdapter
+type gc = googlepubsub.Config
+type gaOpts = googlepubsub.AdapterOptions
 type hdl = messagebroker.SubscribeMessageHandler
 
 type testSubHdl struct{}
 
-func (t *testSubHdl) OnProccess(msg string) {
+func (t *testSubHdl) OnProcess(msg string) {
 	fmt.Println(msg)
 }
 
@@ -29,19 +30,27 @@ func main() {
 		TopicName:         "test",
 		SubscriptionNames: []string{"test-sub"},
 	})
-	cfg := config{
+
+	cfg := gc{
 		AuthJsonPath: "assets/pubsub-credential.json",
 		ProjectId:    "test-go-pub-sub",
 		Strategy:     sl,
 	}
-	client := &client{}
-	broker := &broker{
+
+	broker := &gb{
 		Cfg: cfg,
 	}
-	msgBroker := &adapter{
+
+	rc := redis.NewRedisClient("localhost", 6379, "", 0)
+
+	msgBroker := &ga{
 		Broker: broker,
+		Options: &gaOpts{
+			RedisClient: rc,
+		},
 	}
-	client.Init(msgBroker)
+
+	client := messagebroker.NewClient(msgBroker)
 	thdl := &testSubHdl{}
 	client.Subscribe("test-sub", thdl)
 }

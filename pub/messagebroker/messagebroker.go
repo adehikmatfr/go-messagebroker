@@ -28,9 +28,10 @@ func setLocalMessageBroker(b Messagebroker) {
 	mb = b
 }
 
-func (c *Client) Init(msgb Messagebroker) error {
+func NewClient(msgb Messagebroker) *Client {
 	setLocalMessageBroker(msgb)
-	return msgb.Init()
+	msgb.Init()
+	return &Client{}
 }
 
 func (c *Client) Publish(m PublishMessage) error {
