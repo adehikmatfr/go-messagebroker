@@ -10,7 +10,18 @@ type client = messagebroker.Client
 type broker = googlepubsub.GooglePubSub
 type adapter = googlepubsub.GooglePubSubAdapter
 type config = googlepubsub.Config
-type sub = messagebroker.SubscribMessage
+type hdl = messagebroker.SubscribeMessageHandler
+
+type testSubHdl struct{}
+
+func (t *testSubHdl) OnProccess(msg string) {
+	fmt.Println(msg)
+}
+
+func (t *testSubHdl) OnError(err error) error {
+	fmt.Println(err)
+	return nil
+}
 
 func main() {
 	var sl []googlepubsub.Strategy
@@ -31,8 +42,6 @@ func main() {
 		GooglePubsubBroker: googlePubSubBroker,
 	}
 	client.Init(googlePubSubAdapter)
-	client.Subscrib(sub{
-		Name:   "test-sub",
-		Listen: func(msg string) { fmt.Println(msg) },
-	})
+	thdl := &testSubHdl{}
+	client.Subscribe("test-sub", thdl)
 }

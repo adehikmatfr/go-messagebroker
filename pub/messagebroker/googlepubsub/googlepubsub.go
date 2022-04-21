@@ -52,27 +52,9 @@ func (ga *GooglePubSubAdapter) Publish(m messagebroker.PublishMessage) error {
 	return e
 }
 
-func (ga *GooglePubSubAdapter) Subscrib(s messagebroker.SubscribMessage) error {
-	sub, e := getSubscription(s.Name)
-
-	if e != nil {
-		return e
-	}
-
-	ctx := context.Background()
-
-	e = sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
-		// TODO: Handle message.
-		// NOTE: May be called concurrently; synchronize access to shared memory.
-		m.Ack()
-		str := string(m.Data)
-		s.Listen(str)
-	})
-
-	if e != nil {
-		return e
-	}
-	return nil
+func (ga *GooglePubSubAdapter) Subscribe(name string, handler messagebroker.SubscribeMessageHandler) {
+	e := ga.GooglePubsubBroker.subscribeProccess(name, handler)
+	handler.OnError(e)
 }
 
 func (g *GooglePubSub) initProccess() error {
@@ -111,6 +93,29 @@ func (g *GooglePubSub) publishProccess(p PublishMessage) (string, error) {
 		return "", err
 	}
 	return id, nil
+}
+
+func (g *GooglePubSub) subscribeProccess(subName string, handler messagebroker.SubscribeMessageHandler) error {
+	sub, e := getSubscription(subName)
+
+	if e != nil {
+		return e
+	}
+
+	ctx := context.Background()
+
+	e = sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
+		// TODO: Handle message.
+		// NOTE: May be called concurrently; synchronize access to shared memory.
+		m.Ack()
+		str := string(m.Data)
+		handler.OnProcess(str)
+	})
+
+	if e != nil {
+		return e
+	}
+	return nil
 }
 
 func (g *GooglePubSub) setCredentialEnv() error {

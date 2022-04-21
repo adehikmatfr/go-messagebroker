@@ -3,20 +3,18 @@ package messagebroker
 type Messagebroker interface {
 	Init() error
 	Publish(m PublishMessage) error
-	Subscrib(s SubscribMessage) error
+	Subscribe(name string, handler SubscribeMessageHandler)
 }
 
+type SubscribeMessageHandler interface {
+	OnProccess(msg string)
+	OnError(err error) error
+}
 type PublishMessage struct {
 	Name    string
 	Message string
 	Options PublishOptions
 }
-
-type SubscribMessage struct {
-	Name   string
-	Listen func(msg string)
-}
-
 type PublishOptions struct {
 	EnableOrdering bool
 	OrderingKey    string
@@ -39,6 +37,6 @@ func (c *Client) Publish(m PublishMessage) error {
 	return mb.Publish(m)
 }
 
-func (c *Client) Subscrib(s SubscribMessage) error {
-	return mb.Subscrib(s)
+func (c *Client) Subscribe(name string, handler SubscribeMessageHandler) {
+	mb.Subscribe(name, handler)
 }
