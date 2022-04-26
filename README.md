@@ -5,9 +5,9 @@
 package main
 
 import (
-	"clodeo.tech/platform/go-universe/pkg/messagebroker"
-	"clodeo.tech/platform/go-universe/pkg/messagebroker/googlepubsub"
-	"clodeo.tech/platform/go-universe/pkg/redis"
+	"adehikmatfr/learn-go/pubsub/sub/messagebroker"
+	"adehikmatfr/learn-go/pubsub/sub/messagebroker/googlepubsub"
+	"adehikmatfr/learn-go/pubsub/sub/redis"
 	"fmt"
 )
 
@@ -52,9 +52,9 @@ func main() {
 package main
 
 import (
-	"clodeo.tech/platform/go-universe/pkg/messagebroker"
-	"clodeo.tech/platform/go-universe/pkg/messagebroker/googlepubsub"
-	"clodeo.tech/platform/go-universe/pkg/redis"
+	"adehikmatfr/learn-go/pubsub/sub/messagebroker"
+	"adehikmatfr/learn-go/pubsub/sub/messagebroker/googlepubsub"
+	"adehikmatfr/learn-go/pubsub/sub/redis"
 	"fmt"
 )
 
@@ -85,9 +85,9 @@ func main() {
 package main
 
 import (
-	"clodeo.tech/platform/go-universe/pkg/messagebroker"
-	"clodeo.tech/platform/go-universe/pkg/messagebroker/googlepubsub"
-	"clodeo.tech/platform/go-universe/pkg/redis"
+	"adehikmatfr/learn-go/pubsub/sub/messagebroker"
+	"adehikmatfr/learn-go/pubsub/sub/messagebroker/googlepubsub"
+	"adehikmatfr/learn-go/pubsub/sub/redis"
 	"fmt"
 )
 
