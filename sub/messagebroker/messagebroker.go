@@ -6,9 +6,9 @@ type Messagebroker interface {
 	Subscribe(name string, handler SubscribeMessageHandler)
 }
 
-type SubscribeMessageHandler interface {
-	OnProcess(msg string)
-	OnError(err error) error
+type SubscribeMessageHandler struct {
+	OnProcess func(msg string)
+	OnError   func(err error)
 }
 type PublishMessage struct {
 	Name    string
@@ -28,10 +28,10 @@ func setLocalMessageBroker(b Messagebroker) {
 	mb = b
 }
 
-func NewClient(msgb Messagebroker) *Client {
+func NewClient(msgb Messagebroker) (*Client, error) {
 	setLocalMessageBroker(msgb)
-	msgb.Init()
-	return &Client{}
+	err := msgb.Init()
+	return &Client{}, err
 }
 
 func (c *Client) Publish(m PublishMessage) error {

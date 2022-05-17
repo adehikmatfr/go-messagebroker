@@ -3,7 +3,7 @@ package main
 import (
 	"adehikmatfr/learn-go/pubsub/pub/messagebroker"
 	"adehikmatfr/learn-go/pubsub/pub/messagebroker/googlepubsub"
-	"adehikmatfr/learn-go/pubsub/pub/messagebroker/rabbitmq"
+	"adehikmatfr/learn-go/pubsub/pub/redis"
 	"fmt"
 )
 
@@ -13,39 +13,31 @@ type gb = googlepubsub.GooglePubSub
 type ga = googlepubsub.GooglePubSubAdapter
 type gc = googlepubsub.Config
 type gaOpts = googlepubsub.AdapterOptions
-type rb = rabbitmq.RabbitMQ
-type ra = rabbitmq.RabbitMQAdapter
-type rc = rabbitmq.Config
 
 func main() {
-	// var sl []googlepubsub.Strategy
-	// sl = append(sl, googlepubsub.Strategy{
-	// 	TopicName:         "test",
-	// 	SubscriptionNames: []string{"test-sub"},
-	// })
+	var sl []googlepubsub.Strategy
+	sl = append(sl, googlepubsub.Strategy{
+		TopicName:         "test",
+		SubscriptionNames: []string{"test-sub"},
+	})
 
-	// cfg := gc{
-	// 	AuthJsonPath: "assets/pubsub-credential.json",
-	// 	ProjectId:    "test-go-pub-sub",
-	// 	Strategy:     sl,
-	// }
-
-	// broker := &gb{
-	// 	Cfg: cfg,
-	// }
-
-	// rc := redis.NewRedisClient("localhost", 6379, "", 0)
-
-	cfg := rc{
-		Username: "guest",
-		Password: "guest",
-		Server:   "localhost:5672",
+	cfg := gc{
+		AuthJsonPath: "assets/pubsub-credential.json",
+		ProjectId:    "test-go-pub-sub",
+		Strategy:     sl,
 	}
-	broker := &rb{
+
+	rc := redis.NewRedisClient("localhost", 6379, "", 0)
+
+	broker := &gb{
 		Cfg: cfg,
 	}
-	msgBroker := &ra{
+
+	msgBroker := &ga{
 		Broker: broker,
+		Options: &googlepubsub.AdapterOptions{
+			RedisClient: rc,
+		},
 	}
 
 	client := messagebroker.NewClient(msgBroker)
